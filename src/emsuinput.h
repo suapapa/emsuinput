@@ -4,6 +4,10 @@
 #include <linux/types.h>
 #include <linux/input.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 int emsuinput_device_create(const char *name,
 			    int *keybits, int keybits_cnt,
 			    int *relbits, int relbits_cnt);
@@ -14,5 +18,9 @@ int emsuinput_send_events(int fd,
 int emsuinput_send_key_down(int fd, __u16 key_code);
 int emsuinput_send_key_up(int fd, __u16 key_code);
 int emsuinput_send_rel_xy(int fd, __s32 x, __s32 y);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif
