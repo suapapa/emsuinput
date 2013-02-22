@@ -1,0 +1,6 @@
+.gitignore
+.sconsign.dblite
+*.o
+*.os
+*~
+.*.sw?
