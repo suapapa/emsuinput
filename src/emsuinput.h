@@ -2,6 +2,7 @@
 #define __HU_INPUT_H__
 
 #include <linux/types.h>
+#include <linux/input.h>
 
 int emsuinput_device_create(const char *name,
 			    int *keybits, int keybits_cnt,

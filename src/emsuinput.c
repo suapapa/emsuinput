@@ -1,4 +1,4 @@
-#define LOG_TAG "uinput"
+#define LOG_TAG "emsuinput"
 #ifdef ANDROID
 //#define LOG_NDEBUG 0
 #include <utils/Log.h>
@@ -6,8 +6,10 @@
 #include <stdio.h>
 #define LOGE(FMT, ARGS...) printf("E/uinput: " FMT "\n", ## ARGS)
 #define LOGW(FMT, ARGS...) printf("W/uinput: " FMT "\n", ## ARGS)
+#define LOGI(FMT, ARGS...) printf("I/uinput: " FMT "\n", ## ARGS)
 #define LOGD(FMT, ARGS...) printf("D/uinput: " FMT "\n", ## ARGS)
-#define LOGV(FMT, ARGS...) printf("V/uinput: " FMT "\n", ## ARGS)
+//#define LOGV(FMT, ARGS...) printf("V/uinput: " FMT "\n", ## ARGS)
+#define LOGV(FMT, ARGS...)
 #endif
 
 #include <errno.h>
@@ -109,12 +111,16 @@ int emsuinput_device_create(const char *name,
 
 void emsuinput_device_destroy(int fd)
 {
+	LOGV("%s", __func__);
+
 	int err = ioctl(fd, UI_DEV_DESTROY);
 	if (err) {
 		LOGE("failed to dectory uinput device");
 	}
 
 	close(fd);
+
+	LOGI("uinput device destroyed");
 }
 
 int emsuinput_send_events(int fd, __u16 type,
@@ -124,6 +130,8 @@ int emsuinput_send_events(int fd, __u16 type,
 	int err;
 	int i;
 
+	LOGV("%s", __func__);
+
 	gettimeofday(&evt.time, NULL);
 	evt.type = type;
 
@@ -131,7 +139,7 @@ int emsuinput_send_events(int fd, __u16 type,
 		evt.code = codes[i];
 		evt.value = values[i];
 		err = write(fd, &evt, sizeof(evt));
-		if (err) {
+		if (err < 0) {
 			LOGE("failed to send event %d/%d: %s",
 			     i, cnt, strerror(err));
 			return err;
@@ -142,7 +150,7 @@ int emsuinput_send_events(int fd, __u16 type,
 	evt.code = SYN_REPORT;
 	evt.value = 0;
 	err = write(fd, &evt, sizeof(evt));
-	if (err) {
+	if (err < 0) {
 		LOGE("failed to send sync report: %s", strerror(err));
 		return err;
 	}
@@ -153,13 +161,13 @@ int emsuinput_send_events(int fd, __u16 type,
 int emsuinput_send_key_down(int fd, __u16 key_code)
 {
 	__s32 value = 1;
-	return uinput_send_events(fd, EV_KEY, &key_code, &value, 1);
+	return emsuinput_send_events(fd, EV_KEY, &key_code, &value, 1);
 }
 
 int emsuinput_send_key_up(int fd, __u16 key_code)
 {
 	__s32 value = 0;
-	return uinput_send_events(fd, EV_KEY, &key_code, &value, 1);
+	return emsuinput_send_events(fd, EV_KEY, &key_code, &value, 1);
 }
 
 int emsuinput_send_rel_xy(int fd, __s32 x, __s32 y)
@@ -167,5 +175,7 @@ int emsuinput_send_rel_xy(int fd, __s32 x, __s32 y)
 	__u16 codes[2] = { REL_X, REL_Y };
 	__s32 values[2] = { x, y };
 
-	return uinput_send_events(fd, EV_REL, codes, values, 2);
+	LOGV("%s", __func__);
+
+	return emsuinput_send_events(fd, EV_REL, codes, values, 2);
 }
