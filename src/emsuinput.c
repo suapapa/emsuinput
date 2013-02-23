@@ -58,9 +58,9 @@ static int __batch_ioctl(int fd, int cid, int *vs, int vcnt)
 /* #define UINPUT_DEV_PATH "/dev/input/uinput" */
 #endif
 
-static int emsuinput_device_create(const char *name,
-				   int *keybits, int keybits_cnt,
-				   int *relbits, int relbits_cnt)
+static int __device_create(const char *name,
+			   int *keys, int key_cnt,
+			   int *rels, int rel_cnt)
 {
 	struct uinput_user_dev ui_dev;
 	int err;
@@ -76,30 +76,30 @@ static int emsuinput_device_create(const char *name,
 		return -1;
 	}
 
-	if (keybits_cnt > 0) {
-		if (keybits_cnt > KEY_MAX) {
-			LOGE("invalid numbers of keybits");
+	if (key_cnt > 0) {
+		if (key_cnt > KEY_MAX) {
+			LOGE("invalid numbers of keys");
 			goto err_exit;
 		}
-		if (keybits == NULL) {
-			LOGE("got null for keybits");
+		if (keys == NULL) {
+			LOGE("got null for keys");
 			goto err_exit;
 		}
 		ioctl(fd, UI_SET_EVBIT, EV_KEY);
-		__batch_ioctl(fd, UI_SET_KEYBIT, keybits, keybits_cnt);
+		__batch_ioctl(fd, UI_SET_KEYBIT, keys, key_cnt);
 	}
 
-	if (relbits_cnt > 0) {
-		if (relbits_cnt > REL_MAX) {
-			LOGE("invalid numbers of relbits");
+	if (rel_cnt > 0) {
+		if (rel_cnt > REL_MAX) {
+			LOGE("invalid numbers of rels");
 			goto err_exit;
 		}
-		if (relbits == NULL) {
-			LOGE("got null for relbits");
+		if (rels == NULL) {
+			LOGE("got null for rels");
 			goto err_exit;
 		}
 		ioctl(fd, UI_SET_EVBIT, EV_REL);
-		__batch_ioctl(fd, UI_SET_RELBIT, relbits, relbits_cnt);
+		__batch_ioctl(fd, UI_SET_RELBIT, rels, rel_cnt);
 	}
 
 	memset(&ui_dev, 0, sizeof(ui_dev));
@@ -122,7 +122,7 @@ static int emsuinput_device_create(const char *name,
 	return -1;
 }
 
-static void emsuinput_device_destroy(int fd)
+static void __device_destroy(int fd)
 {
 	LOGV("%s", __func__);
 
@@ -137,14 +137,12 @@ static void emsuinput_device_destroy(int fd)
 }
 
 emsuinput_context *emsuinput_new_context(const char *name,
-					 int *keybits, int keybits_cnt,
-					 int *relbits, int relbits_cnt)
+					 int *keys, int key_cnt,
+					 int *rels, int rel_cnt)
 {
 	emsuinput_context *ctx;
 
-	int fd = emsuinput_device_create(name,
-					 keybits, keybits_cnt,
-					 relbits, relbits_cnt);
+	int fd = __device_create(name, keys, key_cnt, rels, rel_cnt);
 	if (fd == -1) {
 		LOGE("failed to create device");
 		return NULL;
@@ -167,7 +165,7 @@ void emsuinput_release_context(emsuinput_context * ctx)
 		return;
 	}
 
-	emsuinput_device_destroy(ctx->fd);
+	__device_destroy(ctx->fd);
 	free(ctx);
 }
 
