@@ -8,19 +8,26 @@
 extern "C" {
 #endif
 
-int emsuinput_device_create(const char *name,
-			    int *keybits, int keybits_cnt,
-			    int *relbits, int relbits_cnt);
-void emsuinput_device_destroy(int fd);
+struct __emsuinput_context {
+	int fd;
+	struct input_event evt;
+};
 
-int emsuinput_send_events(int fd,
-			  __u16 type, __u16 * codes, __s32 * values, int cnt);
-int emsuinput_send_key_down(int fd, __u16 key_code);
-int emsuinput_send_key_up(int fd, __u16 key_code);
-int emsuinput_send_rel_xy(int fd, __s32 x, __s32 y);
+typedef struct __emsuinput_context emsuinput_context;
+
+emsuinput_context *emsuinput_new_context(const char *name,
+					 int *keybits, int keybits_cnt,
+					 int *relbits, int relbits_cnt);
+void emsuinput_release_context(emsuinput_context * context);
+
+int emsuinput_send_events(emsuinput_context * ctx,
+			  __u16 type, __u16 * codes, __s32 * values,
+			  int cnt);
+int emsuinput_send_key_down(emsuinput_context * ctx, __u16 key_code);
+int emsuinput_send_key_up(emsuinput_context * ctx, __u16 key_code);
+int emsuinput_send_rel_xy(emsuinput_context * ctx, __s32 x, __s32 y);
 
 #ifdef __cplusplus
 }
 #endif
-
 #endif

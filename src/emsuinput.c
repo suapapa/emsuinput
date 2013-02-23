@@ -14,6 +14,7 @@
 
 #include <errno.h>
 #include <fcntl.h>
+#include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
 #include <sys/ioctl.h>
@@ -45,9 +46,9 @@ static int __batch_ioctl(int fd, int cid, int *vs, int vcnt)
 /* #define UINPUT_DEV_PATH "/dev/input/uinput" */
 #endif
 
-int emsuinput_device_create(const char *name,
-			    int *keybits, int keybits_cnt,
-			    int *relbits, int relbits_cnt)
+static int emsuinput_device_create(const char *name,
+				   int *keybits, int keybits_cnt,
+				   int *relbits, int relbits_cnt)
 {
 	struct uinput_user_dev ui_dev;
 	int err;
@@ -109,13 +110,13 @@ int emsuinput_device_create(const char *name,
 	return -1;
 }
 
-void emsuinput_device_destroy(int fd)
+static void emsuinput_device_destroy(int fd)
 {
 	LOGV("%s", __func__);
 
 	int err = ioctl(fd, UI_DEV_DESTROY);
 	if (err) {
-		LOGE("failed to dectory uinput device");
+		LOGE("failed to dectory uinput device: %s", strerror(err));
 	}
 
 	close(fd);
@@ -123,22 +124,57 @@ void emsuinput_device_destroy(int fd)
 	LOGI("uinput device destroyed");
 }
 
-int emsuinput_send_events(int fd, __u16 type,
+emsuinput_context *emsuinput_new_context(const char *name,
+					 int *keybits, int keybits_cnt,
+					 int *relbits, int relbits_cnt)
+{
+	emsuinput_context *ctx;
+
+	int fd = emsuinput_device_create(name,
+					 keybits, keybits_cnt,
+					 relbits, relbits_cnt);
+	if (fd == -1) {
+		LOGE("failed to create device");
+		return NULL;
+	}
+
+	ctx = (emsuinput_context *) calloc(1, sizeof(emsuinput_context));
+	if (ctx == NULL) {
+		LOGE("failed to alloc memory for context");
+	} else {
+		ctx->fd = fd;
+	}
+
+	return ctx;
+}
+
+void emsuinput_release_context(emsuinput_context * ctx)
+{
+	if (ctx == NULL) {
+		LOGE("got null for context");
+		return;
+	}
+
+	emsuinput_device_destroy(ctx->fd);
+	free(ctx);
+}
+
+int emsuinput_send_events(emsuinput_context * ctx, __u16 type,
 			  __u16 * codes, __s32 * values, int cnt)
 {
-	struct input_event evt;
 	int err;
 	int i;
+	struct input_event *evt = &(ctx->evt);
 
 	LOGV("%s", __func__);
 
-	gettimeofday(&evt.time, NULL);
-	evt.type = type;
+	gettimeofday(&(evt->time), NULL);
+	evt->type = type;
 
 	for (i = 0; i < cnt; i++) {
-		evt.code = codes[i];
-		evt.value = values[i];
-		err = write(fd, &evt, sizeof(evt));
+		evt->code = codes[i];
+		evt->value = values[i];
+		err = write(ctx->fd, evt, sizeof(struct input_event));
 		if (err < 0) {
 			LOGE("failed to send event %d/%d: %s",
 			     i, cnt, strerror(err));
@@ -146,10 +182,10 @@ int emsuinput_send_events(int fd, __u16 type,
 		}
 	}
 
-	evt.type = EV_SYN;
-	evt.code = SYN_REPORT;
-	evt.value = 0;
-	err = write(fd, &evt, sizeof(evt));
+	evt->type = EV_SYN;
+	evt->code = SYN_REPORT;
+	evt->value = 0;
+	err = write(ctx->fd, evt, sizeof(struct input_event));
 	if (err < 0) {
 		LOGE("failed to send sync report: %s", strerror(err));
 		return err;
@@ -158,24 +194,24 @@ int emsuinput_send_events(int fd, __u16 type,
 	return 0;
 }
 
-int emsuinput_send_key_down(int fd, __u16 key_code)
+int emsuinput_send_key_down(emsuinput_context * ctx, __u16 key_code)
 {
 	__s32 value = 1;
-	return emsuinput_send_events(fd, EV_KEY, &key_code, &value, 1);
+	return emsuinput_send_events(ctx, EV_KEY, &key_code, &value, 1);
 }
 
-int emsuinput_send_key_up(int fd, __u16 key_code)
+int emsuinput_send_key_up(emsuinput_context * ctx, __u16 key_code)
 {
 	__s32 value = 0;
-	return emsuinput_send_events(fd, EV_KEY, &key_code, &value, 1);
+	return emsuinput_send_events(ctx, EV_KEY, &key_code, &value, 1);
 }
 
-int emsuinput_send_rel_xy(int fd, __s32 x, __s32 y)
+int emsuinput_send_rel_xy(emsuinput_context * ctx, __s32 x, __s32 y)
 {
 	__u16 codes[2] = { REL_X, REL_Y };
 	__s32 values[2] = { x, y };
 
 	LOGV("%s", __func__);
 
-	return emsuinput_send_events(fd, EV_REL, codes, values, 2);
+	return emsuinput_send_events(ctx, EV_REL, codes, values, 2);
 }
