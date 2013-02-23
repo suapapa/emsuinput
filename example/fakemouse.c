@@ -8,8 +8,8 @@
 int main()
 {
 	int i;
-	int fd;
 	int err = 0;
+	emsuinput_context* ctx = NULL;
 
 	int keybits[] = {
 		BTN_LEFT,
@@ -20,21 +20,21 @@ int main()
 		REL_Y,
 	};
 
-	fd = emsuinput_device_create("fakemouse", keybits, 1, relbits, 2);
-	if (fd <= 0) {
+	ctx = emsuinput_new_context("fakemouse", keybits, 1, relbits, 2);
+	if (ctx == NULL) {
 		exit(-1);
 	}
 
 	for (i = 0; i < 100; i++) {
-		err = emsuinput_send_rel_xy(fd, 10, 10);
+		err = emsuinput_send_rel_xy(ctx, 10, 10);
 		CHECKERR(err);
 		usleep(10 * 1000);
 	}
 
-	/* err = emsuinput_send_rel_xy(fd, -3000, -3000); */
-	/* err = emsuinput_send_rel_xy(fd, 640, 480); */
+	/* err = emsuinput_send_rel_xy(ctx, -3000, -3000); */
+	/* err = emsuinput_send_rel_xy(ctx, 640, 480); */
 
-	emsuinput_device_destroy(fd);
+	emsuinput_release_context(ctx);
 
 	exit(0);
 
