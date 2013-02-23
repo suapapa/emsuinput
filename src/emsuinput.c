@@ -23,6 +23,18 @@
 
 #include "emsuinput.h"
 
+#define EMSUINPUT_VER_MAJOR 0
+#define EMSUINPUT_VER_MINOR 2
+#define EMSUINPUT_VER #EMSUINPUT_VER_MAJOR "." #EMSUINPUT_VER_MINOR
+
+void emsuinput_get_version(int *major, int *minor)
+{
+	if (major)
+		*major = EMSUINPUT_VER_MAJOR;
+	if (minor)
+		*minor = EMSUINPUT_VER_MINOR;
+}
+
 static int __batch_ioctl(int fd, int cid, int *vs, int vcnt)
 {
 	int i;

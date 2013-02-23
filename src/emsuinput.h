@@ -15,6 +15,8 @@ struct __emsuinput_context {
 
 typedef struct __emsuinput_context emsuinput_context;
 
+void emsuinput_get_version(int *major, int *minor);
+
 emsuinput_context *emsuinput_new_context(const char *name,
 					 int *keybits, int keybits_cnt,
 					 int *relbits, int relbits_cnt);
